@@ -5,13 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClickableClue from "./components/ClickableClue";
 
-/** ---- Stages (puzzles) ---- */
 type Stage = {
   id: number;
   title: string;
   brief: string;
   inputLabel: string;
-  placeholder?: string;
+  answer: string;
   check: (answer: string) => boolean;
   hint: string;
 };
@@ -22,7 +21,7 @@ const STAGES: Stage[] = [
     title: "Stage 1: Decode the word",
     brief: `Note: "Uifsf jt b tfdsfu qbttqisbtf" — reverse Caesar +1.`,
     inputLabel: "Decoded phrase",
-    placeholder: "there is a secret passphrase",
+    answer: "there is a secret passphrase",
     check: (a) => a.trim().toLowerCase() === "there is a secret passphrase",
     hint: "Shift each letter back by one alphabet.",
   },
@@ -31,7 +30,7 @@ const STAGES: Stage[] = [
     title: "Stage 2: Sum the digits",
     brief: "Keypad shows 1, 9, 4, 7, 5. Enter their total.",
     inputLabel: "Total",
-    placeholder: "26",
+    answer: "26",
     check: (a) => Number(a.trim()) === 26,
     hint: "Add them carefully.",
   },
@@ -40,7 +39,7 @@ const STAGES: Stage[] = [
     title: "Stage 3: Minimal HTML",
     brief: "Type a valid minimal HTML page on one line.",
     inputLabel: "HTML",
-    placeholder: "<!doctype html><html><body>ok</body></html>",
+    answer: "<!doctype html><html><body>ok</body></html>",
     check: (a) => {
       const s = a.trim().toLowerCase();
       return (
@@ -55,11 +54,9 @@ const STAGES: Stage[] = [
   },
 ];
 
-/** ---- Page ---- */
 export default function EscapeRoom() {
   const router = useRouter();
 
-  // timer
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const raf = useRef<number | null>(null);
@@ -99,7 +96,7 @@ export default function EscapeRoom() {
     return Math.max(0, 100 - hintPenalty - timePenalty);
   }, [hints, elapsed]);
 
-  // --- Unlock animation (10 seconds) before navigating ---
+  /** 🔹 Shortened door animation to 5 seconds */
   function playUnlockAndNavigate(t: number, s: number) {
     const glow = document.createElement("div");
     glow.style.position = "fixed";
@@ -107,7 +104,7 @@ export default function EscapeRoom() {
     glow.style.pointerEvents = "none";
     glow.style.background =
       "radial-gradient(circle at 20% 40%, rgba(255,255,255,0.9), rgba(255,255,255,0) 70%)";
-    glow.style.animation = "fadeOut 10s ease forwards";
+    glow.style.animation = "fadeOut 5s ease forwards";
     document.body.appendChild(glow);
 
     setTimeout(() => {
@@ -115,7 +112,7 @@ export default function EscapeRoom() {
         document.body.removeChild(glow);
       } catch {}
       router.push(`/results?t=${t}&s=${s}`);
-    }, 10000); // 10-second delay
+    }, 5000);
   }
 
   function submit() {
@@ -143,18 +140,46 @@ export default function EscapeRoom() {
         <div>
           <strong>Timer:</strong> {hhmmss}
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={() => setRunning(true)}>Start</button>
-            <button onClick={() => setRunning(false)}>Pause</button>
+            <button onClick={() => setRunning(true)}>
+              <img
+                src="/icons/start.svg"
+                alt="Start"
+                width={18}
+                height={18}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Start
+            </button>
+
+            <button onClick={() => setRunning(false)}>
+              <img
+                src="/icons/pause.svg"
+                alt="Pause"
+                width={18}
+                height={18}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Pause
+            </button>
+
             <button
               onClick={() => {
                 setRunning(false);
                 setElapsed(0);
               }}
             >
+              <img
+                src="/icons/reset.svg"
+                alt="Reset"
+                width={18}
+                height={18}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
               Reset
             </button>
           </div>
         </div>
+
         <div style={{ marginLeft: "auto" }}>
           <strong>Score:</strong> {score}
           <div style={{ fontSize: 12, opacity: 0.75 }}>
@@ -163,7 +188,7 @@ export default function EscapeRoom() {
         </div>
       </div>
 
-      {/* Background with hotspots */}
+      {/* Background clues */}
       <div style={{ marginTop: 12, marginBottom: 16 }}>
         <ClickableClue
           currentStage={i + 1}
@@ -183,7 +208,7 @@ export default function EscapeRoom() {
           id="ans"
           style={{ width: "100%", minHeight: 140 }}
           value={answers[i]}
-          placeholder={STAGES[i].placeholder}
+          placeholder={STAGES[i].answer}     // ✅ shows correct answer
           onChange={(e) =>
             setAnswers((prev) =>
               prev.map((x, idx) => (idx === i ? e.target.value : x))
@@ -194,7 +219,7 @@ export default function EscapeRoom() {
         <input
           id="ans"
           value={answers[i]}
-          placeholder={STAGES[i].placeholder}
+          placeholder={STAGES[i].answer}     // ✅ shows correct answer
           onChange={(e) =>
             setAnswers((prev) =>
               prev.map((x, idx) => (idx === i ? e.target.value : x))
@@ -228,21 +253,12 @@ export default function EscapeRoom() {
         </div>
       </div>
 
-      {/* Local keyframes for 10-second unlock glow */}
       <style jsx global>{`
         @keyframes fadeOut {
-          0% {
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-          }
+          0% { opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { opacity: 0; }
         }
       `}</style>
     </section>

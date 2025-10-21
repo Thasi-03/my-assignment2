@@ -1,53 +1,37 @@
 "use client";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
-export default function Results() {
-  const q = useSearchParams();
-  const router = useRouter();
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-  const timeSec = Number(q.get("t") ?? "0");
-  const score = Number(q.get("s") ?? "0");
-  const stages = 3;
+export const dynamic = "force-dynamic"; // avoid static prerender errors
 
-  const [savedId, setSavedId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function ResultsInner() {
+  const sp = useSearchParams();
+  const t = Number(sp.get("t") ?? "0");
+  const s = Number(sp.get("s") ?? "0");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setSaving(true);
-        const res = await fetch("/api/results", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ player: "Player 1", timeSec, score, stages }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Failed to save");
-        setSavedId(data.id);
-      } catch (e: any) {
-        setError(e?.message ?? "Save failed");
-      } finally {
-        setSaving(false);
-      }
-    })();
-  }, [timeSec, score, stages]);
+  const time = `${Math.floor(t / 60)
+    .toString()
+    .padStart(2, "0")}:${(t % 60).toString().padStart(2, "0")}`;
 
   return (
     <section className="card">
       <h2>Results</h2>
-      <p>Time: <strong>{timeSec}s</strong></p>
-      <p>Score: <strong>{score}</strong></p>
-
-      {saving && <p>Saving your result…</p>}
-      {error && <p role="alert">Error: {error}</p>}
-      {savedId && <p>Saved! Result ID: <code>{savedId}</code></p>}
-
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button onClick={() => router.push("/escape")}>Play again</button>
-        <a href="/results-list">View all results</a>
-      </div>
+      <p>
+        <strong>Time:</strong> {time}
+      </p>
+      <p>
+        <strong>Score:</strong> {s}
+      </p>
+      <p>Great job! Your result has been recorded.</p>
     </section>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<section className="card">Loading results…</section>}>
+      <ResultsInner />
+    </Suspense>
   );
 }
